@@ -40,6 +40,12 @@ app.get('/projects', async (req, res) => {
     res.render('projects', { title });
 });
 
+app.get('/categories', async (req, res) => {
+    const title = 'Categories';
+    res.render('categories', { title });
+});
+
+
 console.log("y ahora");
 
 app.listen(PORT, () => {
