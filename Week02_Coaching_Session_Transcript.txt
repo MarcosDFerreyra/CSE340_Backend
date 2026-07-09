@@ -1,0 +1,311 @@
+WEEK 02 COACHING SESSION TRANSCRIPT
+Learning Coach and Software Mentor Session with Marcos
+=========================================================
+
+AI: Welcome! Just to be clear from the start, this is a coaching session, not a test. It is perfectly okay—and even encouraged—to say "I don't know" or "I made a mistake." That's the fastest way we'll learn today.
+
+Before we dive in, this is a safe learning space, and I want you to feel comfortable sharing rough edges, half-finished thoughts, or things you're unsure about — that's exactly what helps us find the useful stuff to talk through.
+
+Since we're chatting here in a text interface rather than in a code editor, whenever we get to a piece of code you want to discuss, just paste the relevant snippet right into the chat and we'll dig into it together.
+
+Let's start simple: what's your name, and what's the assignment we're working through today?
+
+USER: the same as last time. marcos. ans start from the first
+
+AI: Good to see you again, Marcos! Let's pick up where we left off and work through the four topics.
+
+Let's start with Topic 1: Relational Database Design and Structure.
+
+Can you paste in one of your SQL table creation statements (or a query) that involves a relationship between two tables — and tell me a bit about what those tables represent in your app?
+
+USER:
+```sql
+create table organizations(
+	organization_id serial primary key,
+	name varchar(120) not null,
+	description text not null,
+	email varchar(100) not null,
+	logo_filename varchar(100) not null
+);
+```
+
+AI: Nice, thanks Marcos. That's a solid single-table definition — clear primary key, sensible types, and required fields.
+
+Since this table is about organizations, I'm curious about the relational side of things: what other table(s) in your database connect to organizations, and what kind of relationship do they have with it (one-to-many, many-to-many, etc.)?
+
+USER: hay un table relacionada a esta llamada projects
+
+```sql
+CREATE TABLE projects (
+    project_id SERIAL PRIMARY KEY,
+    organization_id INT NOT NULL REFERENCES organizations(organization_id),
+    title VARCHAR(100) NOT NULL,
+    description TEXT NOT NULL,
+    location VARCHAR(100) NOT NULL,
+    starting_date DATE NOT NULL
+);
+```
+
+es un one to many. una organizacion puede tener muchos proyectos pero un proyecto pertenece a una organizacion.
+segui en ingles vos
+
+AI: Perfect, that's exactly right — organization_id as a foreign key in projects gives you that one-to-many relationship: one organization, many projects, but each project tied back to just one organization.
+
+Now let's connect this to actual usage: can you share one SQL query that joins organizations and projects together — something you'd actually use in your app?
+
+USER: algo asi :
+
+```javascript
+const getAllProjects = async () => {
+    const query = `
+        SELECT p.project_id, p.organization_id, o.name AS organization_name, p.title, p.description, p.location, p.project_date
+      FROM public.projects p
+      join organizations o
+      on p.organization_id = o.organization_id;
+    `;
+
+    const result = await db.query(query);
+
+    return result.rows;
+}
+```
+
+AI: Great, this shows both the query and how you're using it in Node — we'll use it for both topics.
+
+Let's focus on the SQL first: why did you choose a JOIN here instead of just querying the projects table alone, and what does adding o.name AS organization_name give you that you wouldn't have otherwise?
+
+USER: por que era la manera de involucrar la relacion entre ambas tablas, de esa manera podia traer el nombre de la organizacion. 
+y el as, el alias es solamente para nombrarla diferente, tambien da mas comodida
+
+AI: That's exactly it — the join lets you pull related data across tables in one query, and the alias just makes the result easier to read/work with.
+
+One more thing I want to check your understanding on before we move to Topic 2: why not just store the organization's name directly as a column in the projects table, instead of doing a join every time you need it?
+
+USER: por que eso haria que la misma informacion se repitiera en dos tables distintas, cuando el objetivo de cualquier base de datos es reducir la redundancia
+
+AI: Exactly — that's the core idea of normalization: avoid duplicating data, keep a single source of truth, and use relationships (foreign keys + joins) to pull it together when needed. Great explanation.
+
+That wraps up Topic 1 nicely. Let's move to Topic 2: Server-Side Data Access Logic (Node.js).
+
+You already showed me getAllProjects above, which is a good start. Can you walk me through what's happening step by step in that function — specifically, what db.query(query) is doing and what await is doing there?
+
+USER: bueno en general lo que la funcion hace es obviamente llamar a la table en este caso projects y a su informacion. no estoy seguro de la funcion de db.query(query) aparte de tal vez conectar con la base de datos y se que el await frena la funcion hasta recibir informacion
+
+AI: That's totally fine to be unsure about — this is a great spot to dig in a bit.
+
+You're right that await pauses execution until the promise resolves. And you're on the right track with db.query() — it does involve the database connection. Do you know what db actually is in your code? Like, where is it defined or imported from — is it a pg Pool, a Client, something else?
+
+USER: te puedo copiar el codigo si queres
+
+AI: Yes, that would help a lot — go ahead and paste it.
+
+USER:
+```javascript
+import { Pool } from 'pg';
+
+/**
+ * Connection pool for PostgreSQL database.
+ * 
+ * A connection pool maintains a set of reusable database connections
+ * to avoid the overhead of creating new connections for each request.
+ * This improves performance and reduces load on the database server.
+ * 
+ * Uses a connection string from environment variables for simplified setup.
+ * The connection string format is:
+ * postgresql://username:password@host:port/database
+ */
+const pool = new Pool({
+    connectionString: process.env.DB_URL,
+    ssl: {
+        rejectUnauthorized: false
+    }
+});
+
+/**
+ * Common SSL Issue:
+ *
+ * You may encounter SSL connection errors depending on your operating system, Node.js
+ * version, or PostgreSQL server settings. If you have confirmed your credentials are
+ * correct but still see SSL errors, try updating the 'ssl' property in the Pool
+ * configuration above to:
+ *
+ * ssl: {
+ *     rejectUnauthorized: false
+ * }
+ */
+
+/**
+ * Since we will modify the normal pool object in development mode, we need to create and
+ * export a reference to the pool object. This allows us to use the same name for the
+ * export regardless of whether we are in development or production mode.
+ */
+let db = null;
+
+if (process.env.NODE_ENV === 'development' && process.env.ENABLE_SQL_LOGGING === 'true') {
+    /**
+     * In development mode, we wrap the pool to provide query logging.
+     * This helps with debugging by showing all executed queries in the console.
+     * 
+     * The wrapper also adds timing information to help identify slow queries
+     * and tracks the number of rows affected by each query.
+     */
+    db = {
+        async query(text, params) {
+            try {
+                const start = Date.now();
+                const res = await pool.query(text, params);
+                const duration = Date.now() - start;
+                console.log('Executed query:', {
+                    text: text.replace(/\s+/g, ' ').trim(),
+                    duration: `${duration}ms`,
+                    rows: res.rowCount
+                });
+                return res;
+            } catch (error) {
+                console.error('Error in query:', {
+                    text: text.replace(/\s+/g, ' ').trim(),
+                    error: error.message
+                });
+                throw error;
+            }
+        },
+
+        async close() {
+            await pool.end();
+        }
+    };
+} else {
+    // In production, export the pool directly without logging overhead
+    db = pool;
+}
+
+/**
+ * Tests the database connection by executing a simple query.
+ */
+const testConnection = async () => {
+    try {
+        const result = await db.query('SELECT NOW() as current_time');
+        console.log('Database connection successful:', result.rows[0].current_time);
+        return true;
+    } catch (error) {
+        console.error('Database connection failed:', error.message);
+        throw error;
+    }
+};
+
+export { db as default, testConnection };
+```
+
+AI: Ah, this makes it much clearer — thanks for sharing the whole file.
+
+So db is either the raw pg Pool (in production) or a wrapped version of it (in development) that adds logging. And pool.query() is the actual method from the pg library that sends your SQL string to PostgreSQL and returns a result.
+
+Here's my question: why do you think they went through the trouble of creating that connection pool (with new Pool(...)) instead of just opening a single new connection to the database every time a query needs to run?
+
+USER: no se
+
+AI: No worries, that's a completely fair "I don't know" — this one's a bit more about infrastructure than something you'd necessarily have written yourself.
+
+Here's the idea: opening a new database connection is actually kind of expensive (it takes time and resources — a bit like opening a new phone line every single time you want to say one sentence). A pool keeps a set of connections already open and ready to go, and hands them out to your queries as needed, then takes them back when done. So if your app gets 50 requests at once, it can reuse a handful of open connections instead of creating 50 brand new ones.
+
+Does that distinction make sense — reusing existing connections vs. creating a new one every time?
+
+USER: si se entiende, es mas util y mas barato por asi decirlo
+
+AI: Exactly — cheaper and faster, and it scales much better under load. Nice, that's Topic 2 covered well.
+
+Let's move to Topic 3: Express Server Logic and Routing.
+
+Can you paste a routing declaration from your main server file (or wherever your routes are defined) — something that connects a URL path to a controller/handler function, like the one that probably uses your getAllProjects function?
+
+USER:
+```javascript
+app.get('/projects', async (req, res) => {
+    const projects = await getAllProjects();
+    const title = 'Service Projects';
+    res.render('projects', { title, projects });
+});
+```
+
+AI: Nice, clean route handler. Let's break it down a bit.
+
+Walk me through what's happening with res.render('projects', { title, projects }) — what is res.render actually doing, and why do you think you're passing that object with title and projects into it?
+
+USER: me podrias explicar vos esta parte
+
+AI: Of course, let's break it down together.
+
+res.render() is an Express method that tells the server: "take this template file and turn it into actual HTML to send back to the browser." The first argument, 'projects', is the name of the template file (in your case, an EJS file — probably projects.ejs) that Express will look for in your views folder.
+
+The second argument — { title, projects } — is the data you're handing over to that template. This is shorthand syntax in JavaScript: instead of writing { title: title, projects: projects }, you can just write { title, projects } when the variable name and the key name are the same. So inside your EJS file, you'll have access to two variables: title and projects, which you can use to actually display content (like looping through the projects list to show each one).
+
+So basically: the route fetches the data, and res.render combines that data with the HTML template to produce the final page sent to the browser.
+
+Does that connect for you — the idea that res.render is merging your data with a template file to build the page?
+
+USER: podrias dar esa misma explicacion pero en español
+
+AI: Claro, te lo explico en español.
+
+res.render() es un método de Express que le dice al servidor: "toma este archivo de plantilla y conviértelo en HTML real para enviárselo al navegador". El primer argumento, 'projects', es el nombre del archivo de plantilla (en tu caso, un archivo EJS — probablemente projects.ejs) que Express va a buscar en tu carpeta de vistas (views).
+
+El segundo argumento — { title, projects } — son los datos que le estás pasando a esa plantilla. Esto es una forma abreviada de escribir JavaScript: en vez de escribir { title: title, projects: projects }, podés escribir directamente { title, projects } cuando el nombre de la variable coincide con el nombre de la clave. Entonces, dentro de tu archivo EJS, vas a tener acceso a dos variables: title y projects, que podés usar para mostrar contenido (por ejemplo, recorriendo la lista de proyectos para mostrar cada uno).
+
+Entonces básicamente: la ruta busca los datos, y res.render combina esos datos con la plantilla HTML para armar la página final que se envía al navegador.
+
+¿Te queda claro esto — la idea de que res.render combina tus datos con un archivo de plantilla para construir la página?
+
+USER: perfecto. podes seguir en ingles con el siguiente
+
+AI: Perfect, got it. Let's move to our last one: Topic 4: Client-Side Rendering (EJS Templates).
+
+Can you paste the part of your projects.ejs file where you're looping through the projects array and displaying each project's data?
+
+USER:
+```html
+<%- include('partials/header') %>
+    <main>
+        <h1>
+            <%= title %>
+        </h1>
+        <h2>Upcoming Service Projects</h2>
+        <ul class="project-list">
+            <% projects.forEach(project => { %>
+                <li><%= new Date(project.project_date).toLocaleDateString('en-US', { year: 'numeric' , month: 'long' , day: 'numeric' }) %>
+                : <%=project.title%> (<%=project.organization_name%>)</li>
+            <% }); %>
+        </ul>
+    </main>
+    <%- include('partials/footer') %>
+```
+
+AI: Nice, good snippet to dig into — there's a lot happening here.
+
+I want to focus on one specific thing: what's the difference between <%= %> and <%- %> in EJS, and why did you use each one where you did in this file?
+
+USER: por lo que tengo entendido uno difiere o escapa de html, <%= %>, este sirve para nombrar titulos o variables creo. y el otro puede servir mas en general
+
+AI: You're on the right track with the general idea — let's sharpen it up a bit.
+
+<%= %> escapes HTML — meaning if the value contains characters like <, >, or &, it converts them to safe entities so they display as literal text instead of being interpreted as HTML. That's why you use it for things like title, project.title, and the formatted date — you're just displaying plain text/data, and you don't want any risk of it being treated as actual HTML tags.
+
+<%- %> does not escape — it outputs raw HTML as-is. That's why you use it for include('partials/header') — you actually want that included content to be interpreted as real HTML (tags, structure, etc.), not shown as literal text on the page.
+
+Here's a question to check this really clicked: if project.title somehow contained something like <script>alert('hi')</script>, what would happen differently if you used <%= %> versus <%- %> to display it?
+
+USER: tomaria todo como texto, mostraria todo tal cual lo ves ahi, no mostraria hi
+
+AI: Exactly right — with <%= %>, it would just display the literal text <script>alert('hi')</script> on the page, harmless. But with <%- %>, that script tag would actually be interpreted as real HTML and the JavaScript would execute — that's a security risk called XSS (Cross-Site Scripting). So <%= %> isn't just about formatting — it's also protecting you from malicious data being injected and run in the browser.
+
+Great, that's a solid understanding, and it wraps up all four topics.
+
+To recap what we covered:
+1. Database design — one-to-many relationship between organizations and projects, and why normalization avoids redundancy
+2. Node.js data access — connection pools and why they're more efficient than opening new connections each time
+3. Express routing — how res.render merges route data with a template
+4. EJS templating — the difference between escaped (<%= %>) and unescaped (<%- %>) output, and the XSS risk involved
+
+Nice work today, Marcos.
+
+=========================================================
+END OF TRANSCRIPT
