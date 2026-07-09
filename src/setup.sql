@@ -43,5 +43,53 @@ VALUES
     (3, 'Neighborhood Cleanup Day', 'Remove litter and beautify streets and public spaces with community volunteers.', 'Westside Neighborhood', '2026-10-17'),
     (3, 'Holiday Toy Collection', 'Collect and distribute toys to children during the holiday season.', 'Unity Community Center', '2026-12-05');
 
-
 select * from projects
+
+create table categories (
+	category_id serial primary key,
+	category_name varchar(70) not null
+);
+
+create table project_categories (
+	category_id int not null references categories (category_id),
+	project_id int not null references projects (project_id),
+	primary key (project_id, category_id)
+);
+
+insert into categories (category_name)
+values 
+	('Construction'),
+	('Environment'),
+	('Community Support');
+
+select * from categories;
+
+insert into project_categories (category_id, project_id)
+values
+	(1, 1),
+    (1, 2),
+    (1, 3),
+    (1, 4),
+    (1, 5),
+
+    -- Environment
+    (2, 5),
+    (2, 6),
+    (2, 7),
+    (2, 8),
+    (2, 9),
+    (2, 10),
+    (2, 14),
+
+    -- Community Support
+    (3, 2),
+    (3, 4),
+    (3, 8),
+    (3, 9),
+    (3, 11),
+    (3, 12),
+    (3, 13),
+    (3, 14),
+    (3, 15);
+
+select * from project_categories;
