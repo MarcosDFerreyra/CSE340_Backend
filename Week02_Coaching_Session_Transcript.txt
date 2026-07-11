@@ -10,7 +10,7 @@ Since we're chatting here in a text interface rather than in a code editor, when
 
 Let's start simple: what's your name, and what's the assignment we're working through today?
 
-USER: the same as last time. marcos. ans start from the first
+USER: Same as last time. Marcos. And let's start from the first one.
 
 AI: Good to see you again, Marcos! Let's pick up where we left off and work through the four topics.
 
@@ -33,7 +33,7 @@ AI: Nice, thanks Marcos. That's a solid single-table definition — clear primar
 
 Since this table is about organizations, I'm curious about the relational side of things: what other table(s) in your database connect to organizations, and what kind of relationship do they have with it (one-to-many, many-to-many, etc.)?
 
-USER: hay un table relacionada a esta llamada projects
+USER: There's a table related to this one called projects.
 
 ```sql
 CREATE TABLE projects (
@@ -46,14 +46,14 @@ CREATE TABLE projects (
 );
 ```
 
-es un one to many. una organizacion puede tener muchos proyectos pero un proyecto pertenece a una organizacion.
-segui en ingles vos
+It's a one-to-many relationship. An organization can have many projects, but a project belongs to only one organization.
+Go ahead and continue in English yourself.
 
 AI: Perfect, that's exactly right — organization_id as a foreign key in projects gives you that one-to-many relationship: one organization, many projects, but each project tied back to just one organization.
 
 Now let's connect this to actual usage: can you share one SQL query that joins organizations and projects together — something you'd actually use in your app?
 
-USER: algo asi :
+USER: Something like this:
 
 ```javascript
 const getAllProjects = async () => {
@@ -74,14 +74,13 @@ AI: Great, this shows both the query and how you're using it in Node — we'll u
 
 Let's focus on the SQL first: why did you choose a JOIN here instead of just querying the projects table alone, and what does adding o.name AS organization_name give you that you wouldn't have otherwise?
 
-USER: por que era la manera de involucrar la relacion entre ambas tablas, de esa manera podia traer el nombre de la organizacion. 
-y el as, el alias es solamente para nombrarla diferente, tambien da mas comodida
+USER: Because it was the way to involve the relationship between both tables — that way I could bring in the organization's name. And the "AS", the alias, is just to name it differently; it also makes it more convenient.
 
 AI: That's exactly it — the join lets you pull related data across tables in one query, and the alias just makes the result easier to read/work with.
 
 One more thing I want to check your understanding on before we move to Topic 2: why not just store the organization's name directly as a column in the projects table, instead of doing a join every time you need it?
 
-USER: por que eso haria que la misma informacion se repitiera en dos tables distintas, cuando el objetivo de cualquier base de datos es reducir la redundancia
+USER: Because that would make the same information repeat across two different tables, when the goal of any database is to reduce redundancy.
 
 AI: Exactly — that's the core idea of normalization: avoid duplicating data, keep a single source of truth, and use relationships (foreign keys + joins) to pull it together when needed. Great explanation.
 
@@ -89,13 +88,13 @@ That wraps up Topic 1 nicely. Let's move to Topic 2: Server-Side Data Access Log
 
 You already showed me getAllProjects above, which is a good start. Can you walk me through what's happening step by step in that function — specifically, what db.query(query) is doing and what await is doing there?
 
-USER: bueno en general lo que la funcion hace es obviamente llamar a la table en este caso projects y a su informacion. no estoy seguro de la funcion de db.query(query) aparte de tal vez conectar con la base de datos y se que el await frena la funcion hasta recibir informacion
+USER: Well, in general, what the function does is obviously call the table — in this case projects — and its information. I'm not sure about the function of db.query(query), aside from maybe connecting to the database, and I know that await pauses the function until it receives the information.
 
 AI: That's totally fine to be unsure about — this is a great spot to dig in a bit.
 
 You're right that await pauses execution until the promise resolves. And you're on the right track with db.query() — it does involve the database connection. Do you know what db actually is in your code? Like, where is it defined or imported from — is it a pg Pool, a Client, something else?
 
-USER: te puedo copiar el codigo si queres
+USER: I can paste the code if you want.
 
 AI: Yes, that would help a lot — go ahead and paste it.
 
@@ -202,7 +201,7 @@ So db is either the raw pg Pool (in production) or a wrapped version of it (in d
 
 Here's my question: why do you think they went through the trouble of creating that connection pool (with new Pool(...)) instead of just opening a single new connection to the database every time a query needs to run?
 
-USER: no se
+USER: I don't know.
 
 AI: No worries, that's a completely fair "I don't know" — this one's a bit more about infrastructure than something you'd necessarily have written yourself.
 
@@ -210,7 +209,7 @@ Here's the idea: opening a new database connection is actually kind of expensive
 
 Does that distinction make sense — reusing existing connections vs. creating a new one every time?
 
-USER: si se entiende, es mas util y mas barato por asi decirlo
+USER: Yes, it makes sense — it's more useful and cheaper, so to speak.
 
 AI: Exactly — cheaper and faster, and it scales much better under load. Nice, that's Topic 2 covered well.
 
@@ -231,7 +230,7 @@ AI: Nice, clean route handler. Let's break it down a bit.
 
 Walk me through what's happening with res.render('projects', { title, projects }) — what is res.render actually doing, and why do you think you're passing that object with title and projects into it?
 
-USER: me podrias explicar vos esta parte
+USER: Could you explain this part to me?
 
 AI: Of course, let's break it down together.
 
@@ -243,19 +242,11 @@ So basically: the route fetches the data, and res.render combines that data with
 
 Does that connect for you — the idea that res.render is merging your data with a template file to build the page?
 
-USER: podrias dar esa misma explicacion pero en español
+USER: Could you give me that same explanation but in Spanish?
 
-AI: Claro, te lo explico en español.
+AI: [Note: the original response here was given in Spanish, at the user's request, as a restatement of the same explanation above about res.render merging data with a template file. No new information was introduced.]
 
-res.render() es un método de Express que le dice al servidor: "toma este archivo de plantilla y conviértelo en HTML real para enviárselo al navegador". El primer argumento, 'projects', es el nombre del archivo de plantilla (en tu caso, un archivo EJS — probablemente projects.ejs) que Express va a buscar en tu carpeta de vistas (views).
-
-El segundo argumento — { title, projects } — son los datos que le estás pasando a esa plantilla. Esto es una forma abreviada de escribir JavaScript: en vez de escribir { title: title, projects: projects }, podés escribir directamente { title, projects } cuando el nombre de la variable coincide con el nombre de la clave. Entonces, dentro de tu archivo EJS, vas a tener acceso a dos variables: title y projects, que podés usar para mostrar contenido (por ejemplo, recorriendo la lista de proyectos para mostrar cada uno).
-
-Entonces básicamente: la ruta busca los datos, y res.render combina esos datos con la plantilla HTML para armar la página final que se envía al navegador.
-
-¿Te queda claro esto — la idea de que res.render combina tus datos con un archivo de plantilla para construir la página?
-
-USER: perfecto. podes seguir en ingles con el siguiente
+USER: Perfect. You can continue in English for the next one.
 
 AI: Perfect, got it. Let's move to our last one: Topic 4: Client-Side Rendering (EJS Templates).
 
@@ -283,7 +274,7 @@ AI: Nice, good snippet to dig into — there's a lot happening here.
 
 I want to focus on one specific thing: what's the difference between <%= %> and <%- %> in EJS, and why did you use each one where you did in this file?
 
-USER: por lo que tengo entendido uno difiere o escapa de html, <%= %>, este sirve para nombrar titulos o variables creo. y el otro puede servir mas en general
+USER: From what I understand, one differs from — or escapes — HTML, that's <%= %>; I think this is used for naming titles or variables. And the other one can be used more generally.
 
 AI: You're on the right track with the general idea — let's sharpen it up a bit.
 
@@ -293,7 +284,7 @@ AI: You're on the right track with the general idea — let's sharpen it up a bi
 
 Here's a question to check this really clicked: if project.title somehow contained something like <script>alert('hi')</script>, what would happen differently if you used <%= %> versus <%- %> to display it?
 
-USER: tomaria todo como texto, mostraria todo tal cual lo ves ahi, no mostraria hi
+USER: It would take everything as text, it would show everything just as you see it there, it wouldn't show "hi".
 
 AI: Exactly right — with <%= %>, it would just display the literal text <script>alert('hi')</script> on the page, harmless. But with <%- %>, that script tag would actually be interpreted as real HTML and the JavaScript would execute — that's a security risk called XSS (Cross-Site Scripting). So <%= %> isn't just about formatting — it's also protecting you from malicious data being injected and run in the browser.
 
