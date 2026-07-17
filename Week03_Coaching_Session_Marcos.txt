@@ -1,0 +1,425 @@
+WEEK 03 COACHING SESSION TRANSCRIPT
+Student: Marcos
+Role: Learning Coach and Software Mentor (non-judgmental coaching session)
+Format: Chat interface (code snippets pasted by student, single-question protocol)
+
+================================================================================
+
+COACH:
+Welcome! Just to be clear from the start, this is a coaching session, not a
+test. It is perfectly okay—and even encouraged—to say "I don't know" or "I
+made a mistake." That's the fastest way we'll learn today.
+
+This is a safe space to think out loud, get things wrong, and figure things
+out together — that's really the whole point of this session.
+
+Since we're chatting here in a browser-based interface rather than inside
+your code editor, I won't be able to see your files directly, so whenever we
+get into the weeds on a piece of code, I'll ask you to paste the relevant
+snippet in.
+
+Before we dive into the four topics (Models, Views, Controllers, and Error
+Handling), let's start simple:
+
+What's your name, and what's the assignment/project we're discussing today?
+
+STUDENT:
+marcos. from the top
+
+--------------------------------------------------------------------------------
+
+COACH:
+Nice to meet you, Marcos — glad you're here. Remember, no pressure at all
+today; this is just us talking through your work so we can spot anything
+worth reinforcing or clearing up.
+
+Let's start with Topic 1: Models.
+
+Can you paste in a non-trivial model function from your project — ideally
+one that accepts a parameter and uses it in a SQL query — and give me a
+quick sense of what it's for?
+
+STUDENT:
+```javascript
+const getCategoryById = async (categoryId) => {
+  const query = `
+    select
+      category_id,
+      category_name
+    from categories
+    where category_id = $1
+  `
+  const result = await db.query(query, [categoryId])
+  return result.rows[0]
+
+}
+```
+
+--------------------------------------------------------------------------------
+
+COACH:
+Thanks for sharing that, Marcos. That's a clean, simple model function — it
+takes a categoryId, runs a parameterized query to fetch a single category,
+and returns the first row.
+
+Here's my one question on this: why did you choose to use $1 as a
+placeholder and pass categoryId in an array to db.query(), instead of just
+building the SQL string directly with something like
+`where category_id = ${categoryId}`?
+
+STUDENT (translated from Spanish):
+Apparently it's a more efficient way to do it. Although the result might
+look the same, doing it this way can prevent SQL injection, although I'm
+not very sure what that is.
+
+--------------------------------------------------------------------------------
+
+COACH (translated from Spanish):
+Very good intuition, Marcos — and you're right about the most important
+part: using $1 with an array of parameters prevents SQL injection. It's
+great that you identified that even without being 100% sure of the concept.
+
+Since you're willing to say "I'm not sure" (which is exactly what we want in
+this session!), let me ask you: what do you imagine could happen — or what
+might a malicious user write — if you built the query by pasting categoryId
+directly into the string, like `where category_id = ${categoryId}`?
+
+STUDENT (translated from Spanish):
+I think it could get mixed up with something else, or maybe an ID that
+doesn't exist would be entered.
+
+--------------------------------------------------------------------------------
+
+COACH (translated from Spanish):
+You're on the right track with the first idea — "mixing with something
+else" is exactly the essence of SQL injection.
+
+I'll give you a concrete example to make it clearer: imagine that instead of
+sending a normal categoryId like 5, someone sends as the value something
+like `5; DROP TABLE categories;--`. If you concatenate that string directly
+into the query, the database could end up executing that extra command —
+deleting the entire table. With $1 and the parameter array, the database
+always treats that value as data (a simple text/number), never as part of
+the SQL command, so that attack doesn't work.
+
+With that clearer, let's move to Topic 2: Views.
+
+Can you paste a non-trivial EJS snippet from your views, ideally one where
+you insert dynamic data into a link (<a href="...">), and briefly tell me
+what it's for?
+
+STUDENT (translated from Spanish):
+So it prevents entering something that isn't data. It prevents entering
+things that could affect the SQL.
+
+--------------------------------------------------------------------------------
+
+COACH (translated from Spanish):
+Exactly, Marcos — you summed it up perfectly. The parameterized query
+ensures that whatever goes in through $1 is always treated as data, never
+as executable SQL code, no matter how "strange" or malicious the content
+is. Good understanding of the concept.
+
+Let's move to Topic 2: Views.
+
+Can you paste a non-trivial EJS snippet from your views — ideally one where
+you insert dynamic data into a link (<a href="...">) — and briefly tell me
+what it's for?
+
+STUDENT:
+but what more can you tell me about models.
+
+--------------------------------------------------------------------------------
+
+COACH (translated from Spanish):
+Good question, Marcos — let's stay with Models a bit longer before moving to
+Views, since there's more to explore there.
+
+In your project, models are usually the layer that communicates directly
+with the database (as opposed to controllers, which handle request/response
+logic, or views, which handle the visual presentation).
+
+Here's an open question: why do you think it's good practice to separate
+the code that talks to the database (like getCategoryById) from the code
+that handles HTTP routes (the controllers)? What advantage do you see in
+that separation?
+
+STUDENT (translated from Spanish):
+Well, like any separation done correctly, it brings more order and
+organization to the whole code. I also think it serves to divide tasks — if
+working in a group, each group could split up a part. And if something is
+done wrong it wouldn't affect the work of others, and it would make it much
+easier for them to later agree on how to fix it.
+
+--------------------------------------------------------------------------------
+
+COACH (translated from Spanish):
+Very good answer, Marcos — you touched on several key points: order/
+organization, division of tasks in a team, and error isolation (a problem
+in one layer doesn't break everything else). That's exactly the idea of
+"separation of concerns" that this MVC architecture is teaching.
+
+With Models well covered, let's move to Topic 2: Views.
+
+Can you paste a non-trivial EJS snippet from your views — ideally one where
+you insert dynamic data into a link (<a href="...">) — and briefly tell me
+what it's for?
+
+Back to Topic 2: Views:
+
+Can you paste a non-trivial EJS snippet from your views — ideally one where
+you insert dynamic data into a link (<a href="...">) — and briefly tell me
+what it's for?
+
+STUDENT:
+```html
+<h1> <%= title %> </h1>
+        <h2> <%= project_details.title %> </h2>
+        <p>Description: <%= project_details.description %></p>
+        <p>Date: <%= new Date(project_details.starting_date).toLocaleDateString('en-US', 
+            {year: 'numeric', 
+            month: 'long',
+            day: 'numeric'}) %></p>
+        <p>location: <%= project_details.location%></p>
+        <a href="/organization/<%= project_details.organization_id%>"><%= project_details.organization_name%></a>
+```
+
+--------------------------------------------------------------------------------
+
+COACH (translated from Spanish):
+Good example, Marcos — you can see you're using EJS both to render plain
+text (title, description, formatted date) and to build a dynamic link by
+inserting `<%= project_details.organization_id %>` directly into the href.
+
+I'm interested in that last line specifically:
+
+Why did you choose to build the link this way, inserting the
+organization_id directly into the URL (/organization/123), instead of, for
+example, using a query string like /organization?id=123?
+
+STUDENT (translated from Spanish):
+Because it's a way to build a general URL or link that can be used for
+many, in this case, organizations. Also, even if there were only one
+organization, at some point there could be more, so I would only need to
+add its information to the database and that's it.
+
+--------------------------------------------------------------------------------
+
+COACH (translated from Spanish):
+Very good point, Marcos — you identified something important: using a route
+pattern like /organization/:id is scalable and reusable. No matter how many
+organizations you have (one or a thousand), the same route and the same
+view/controller code work for all of them, because the ID is dynamic.
+That's exactly thinking in terms of "route parameters," which is what we'll
+look at in the next topic.
+
+One more question before moving to Controllers: what difference do you
+notice (or think there is) between using a route parameter like
+/organization/123 and using a query string like /organization?id=123? When
+would you use one versus the other?
+
+STUDENT (translated from Spanish):
+I think route parameters identify a resource and query strings show how to
+view that resource.
+
+--------------------------------------------------------------------------------
+
+COACH (translated from Spanish):
+Good distinction, Marcos, and you're headed in the right direction. To
+refine it a bit: route parameters (like /organization/123) are usually used
+to identify a specific and required resource — without that ID, the route
+doesn't even make sense. Query strings (like
+/organization?sort=name&page=2) are used more for optional parameters that
+modify how that resource is displayed or filtered — like sorting, filtering,
+or pagination. Your intuition of "identify vs. display" is pretty close to
+that idea.
+
+With Views well covered, let's move to Topic 3: Controllers.
+
+Can you paste a non-trivial route handler snippet from your controllers —
+ideally one that uses a route parameter (like the organization_id we just
+saw) — and tell me what it does?
+
+STUDENT:
+```javascript
+const showProjectsPage = async (req, res) => {
+    const projects = await getUpcomingProjects(NUMBER_OF_UPCOMING_PROJECTS);
+    const title = 'Upcoming Service Projects';
+
+    res.render('projects', { title, projects });
+};
+```
+does this work or another one?
+
+--------------------------------------------------------------------------------
+
+COACH (translated from Spanish):
+Thanks for sharing this, Marcos — it looks good: it calls
+getUpcomingProjects, builds a title, and renders the 'projects' view passing
+that data.
+
+But this particular example doesn't use a route parameter (something like
+req.params.id) — it only uses a fixed constant
+(NUMBER_OF_UPCOMING_PROJECTS). For this topic we specifically need to see a
+handler that receives a parameter from the URL, like the organization_id we
+saw in the view.
+
+Do you have any route handler in your controllers that uses req.params, for
+example one to show the detail of a specific organization or project? If
+so, paste it.
+
+STUDENT:
+```javascript
+const showProjectsDetailPage = async (req, res) => {
+    const id = req.params.id;
+    const project_details = await getProjectDetails(id);
+    const categories = await getCategoriesByProjectId(id)
+    res.render('project', {title: "Service Projects Details", categories, project_details });
+}
+```
+
+--------------------------------------------------------------------------------
+
+COACH:
+Perfect, this is exactly the example we were looking for, Marcos. Here,
+req.params.id takes the dynamic value from the URL (for example, if the
+route is /projects/:id, and someone visits /projects/5, then id would be
+"5"), and that id is used to fetch both the project's details and its
+categories before rendering everything in the view.
+
+I noticed something interesting: you use id here as the route parameter,
+but in the view you shared earlier you used organization_id in the link.
+They're related but different things (one is the project's ID, the other
+is the organization's ID).
+
+Open question: what would happen in this function if someone visits a URL
+like /projects/9999 (an ID that doesn't exist in the database)? What do you
+think getProjectDetails(id) would return, and what would happen afterward
+in res.render(...)?
+
+STUDENT (translated from Spanish):
+I think it would return something like null, and then it's set up so that
+when there's an error it shows the type of error on the page, so
+res.render would do that.
+
+--------------------------------------------------------------------------------
+
+COACH (translated from Spanish):
+Interesting, Marcos — and this leads us perfectly into the last topic.
+You're right that getProjectDetails(id) would probably return undefined (if
+you use result.rows[0] like in your categories model, and there are no
+rows, that gives undefined, not exactly null, but the idea is the same:
+"nothing").
+
+But I notice something important in your answer: you say it's "set up to
+show the type of error" — but looking at the code you shared, I don't see
+any if check for whether project_details is undefined/null before doing
+res.render(...).
+
+What do you think would actually happen in your project.ejs view if
+project_details arrives as undefined at that line
+<h2><%= project_details.title %></h2>? (Think about what type of value
+undefined is, and what happens if you try to access .title on something
+that doesn't exist.)
+
+STUDENT (translated from Spanish):
+I don't know, I just imagine it would try to keep searching and since it's
+undefined it would flag an error.
+
+--------------------------------------------------------------------------------
+
+COACH (translated from Spanish):
+You're on the right track, Marcos, and it's perfectly fine to say "I don't
+know, I imagine" — that's exactly what we want in this session.
+
+Here's what would actually happen technically: undefined.title throws an
+error in JavaScript — something like
+"TypeError: Cannot read properties of undefined (reading 'title')", because
+undefined is not an object and has no properties. That error, if
+unhandled, would crash that request, and Express would typically return a
+generic error page (a 500 - Internal Server Error) by default, unless you
+have something set up to handle it better.
+
+This leads us directly into Topic 4: Error Handling.
+
+Can you paste a code snippet related to how you handle errors in your
+application — for example, an error middleware, a 404 page, or a 500
+handler — and tell me your overall strategy?
+
+STUDENT:
+```javascript
+app.use((err, req, res, next) => {
+    // Log error details for debugging
+    console.error('Error occurred:', err.message);
+    console.error('Stack trace:', err.stack);
+
+    // Determine status and template
+    const status = err.status || 500;
+    const template = status === 404 ? '404' : '500';
+
+    // Prepare data for the template
+    const context = {
+        title: status === 404 ? 'Page Not Found' : 'Server Error',
+        error: err.message,
+        stack: err.stack
+    };
+
+    // Render the appropriate error template
+    res.status(status).render(`errors/${template}`, context);
+});
+```
+
+--------------------------------------------------------------------------------
+
+COACH (translated from Spanish):
+Very good example, Marcos — this is a centralized error-handling middleware
+in Express (you can tell by the 4 parameters: err, req, res, next). It logs
+the error for debugging, determines the status code (using err.status or
+defaulting to 500), chooses the corresponding template (404 or 500), and
+renders that view with the error message.
+
+Two things catch my attention: first, that you only have two templates
+(404 and 500, treating everything that isn't 404 as 500), and second, that
+you're passing error: err.message and stack: err.stack directly to the
+template, meaning they would be displayed on the page.
+
+Why did you choose to show the error's stack trace directly on the page to
+the user? Do you see any downside to doing that, especially on a site in
+production?
+
+STUDENT (translated from Spanish):
+Right now the page is in the development phase, so it's there so that the
+developer — in this case me — can see the error and its information right
+away. But later, if that were left in when a page is already live and open
+to the public, I think it would be counterproductive for users to have
+access to see the page's errors.
+
+--------------------------------------------------------------------------------
+
+COACH (translated from Spanish):
+Excellent answer, Marcos — you nailed it. Showing the stack trace is very
+useful in development (it gives you the exact information about where and
+why something failed), but in production it's a risk: you could be handing
+any user (including a malicious one) internal details of your code — file
+names, server paths, database structure, library versions — information
+that could be used to find vulnerabilities. Common practice is to show a
+generic, user-friendly message in production, and keep the technical detail
+only in server logs (like you're already doing with console.error).
+
+With that, Marcos, we've completed all four topics! Quick recap of what we
+covered:
+
+1. Models — parameterized queries and SQL injection prevention
+2. Views — EJS with dynamic data in a link, and route params vs. query
+   strings
+3. Controllers — route handlers with req.params, and what happens when a
+   resource doesn't exist
+4. Error Handling — centralized middleware, status codes, and why not to
+   show stack traces in production
+
+Good work thinking out loud and being honest when you weren't sure — that's
+exactly what makes a session like this valuable.
+
+================================================================================
+END OF TRANSCRIPT
+================================================================================
