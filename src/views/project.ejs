@@ -20,8 +20,14 @@
                     <% }) %>
             </li>
         </ul>
-        <a href="/assign-categories/<%= project_details.project_id %>">
-            Edit Categories
+        <div>
+
+            <a href="/assign-categories/<%= project_details.project_id %>">
+                Edit Categories
+            </a>
+        </div>
+        <a href="/edit-project/<%= project_details.project_id %>">
+            Edit Project
         </a>
     </main>
     <%- include('partials/footer') %>
