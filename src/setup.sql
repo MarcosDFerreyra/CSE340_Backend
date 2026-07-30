@@ -23,7 +23,7 @@ CREATE TABLE projects (
     starting_date DATE NOT NULL
 );
 
-INSERT INTO projects (organization_id, title, description, location, project_date)
+INSERT INTO projects (organization_id, title, description, location, starting_date)
 VALUES
     (1, 'Community Center Renovation', 'Volunteers renovate an aging community center by repairing walls, painting, and improving accessibility.', 'Springfield Community Center', '2026-08-15'),
     (1, 'Playground Construction', 'Build a safe playground for children in a neighborhood park.', 'Lincoln Park', '2026-09-05'),
