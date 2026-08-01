@@ -93,3 +93,24 @@ values
     (3, 15);
 
 select * from project_categories;
+
+create table roles(
+	role_id SERIAL primary key,
+    role_name VARCHAR(50) unique not null,
+    role_description TEXT	
+);
+
+insert into roles (role_name, role_description) values 
+    ('user', 'Standard user with basic access'),
+    ('admin', 'Administrator with full system access');
+
+select * from roles;
+
+create table users (
+	user_id serial primary key,
+	name varchar(100) not null,
+	email varchar(100) unique not null,
+    password_hash varchar(255) not null,
+    role_id integer references roles(role_id),
+    created_at timestamp default current_timestamp
+)
