@@ -20,7 +20,7 @@ const projectValidation = [
     body('starting_date')
         .notEmpty().withMessage('Date is required')
         .isISO8601().withMessage('Date must be a valid date format'),
-    body('organizationId')
+    body('organization_id')
         .notEmpty().withMessage('Organization is required')
         .isInt().withMessage('Organization must be a valid integer')
 ];
