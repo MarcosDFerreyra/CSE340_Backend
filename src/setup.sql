@@ -82,15 +82,15 @@ values
     (2, 14),
 
     -- Community Support
-    (3, 2),
-    (3, 4),
-    (3, 8),
-    (3, 9),
-    (3, 11),
-    (3, 12),
-    (3, 13),
-    (3, 14),
-    (3, 15);
+    (5, 2),
+    (5, 4),
+    (5, 8),
+    (5, 9),
+    (5, 11),
+    (5, 12),
+    (5, 13),
+    (5, 14),
+    (5, 15);
 
 select * from project_categories;
 
@@ -114,3 +114,10 @@ create table users (
     role_id integer references roles(role_id),
     created_at timestamp default current_timestamp
 )
+
+select * from users
+
+select * from roles
+
+UPDATE users 
+SET role_id = (SELECT role_id FROM roles WHERE role_name = 'admin') WHERE email = 'admin@example.com';
