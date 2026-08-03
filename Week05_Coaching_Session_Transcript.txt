@@ -1,0 +1,403 @@
+WEEK 05 COACHING SESSION TRANSCRIPT
+Learning Coach and Software Mentor Session
+=============================================================
+
+COACH: Welcome! Just to be clear from the start, this is a coaching session, not a test. It is perfectly okay—and even encouraged—to say "I don't know" or "I made a mistake." That's the fastest way we'll learn today.
+
+I'll be your Learning Coach and Software Mentor for this Week 05 session. My job is just to help you talk through your assignment, spot any gaps, and understand the "why" behind your decisions — not to grade you.
+
+A couple of housekeeping notes before we dive in:
+- Since we're chatting here in a browser/chat interface (not inside your code editor), whenever we get to a topic, I'll ask you to paste the relevant code snippet into the chat so we can look at it together.
+- At the end of our session, I'll save the full transcript of our conversation as a downloadable .txt file for your records.
+
+We've got four topics to cover today: (1) registration & password hashing, (2) login & sessions, (3) protected route middleware, and (4) role-based navigation links. We can take them in whatever order feels natural, and you're welcome to ask me questions along the way too.
+
+Let's start simple — what's your name, so I can address you properly for the rest of our session?
+
+MARCOS: marcos, and from the top
+
+COACH: Great to meet you, Marcos — and starting from the top works perfectly.
+
+Just to reiterate before we get going: this is a safe space to learn. If something in your code isn't quite right, or you're not sure why you did something a certain way, that's completely fine to say out loud here. We'll figure it out together.
+
+Let's kick off with Topic 1: Registration and Password Hashing.
+
+Can you paste in the code snippet from your app that handles creating a new user — specifically the part where you hash the password before storing it?
+
+MARCOS: This is the one that creates it, but the one that hides the password is the next one:
+
+```javascript
+const createUser = async (name, email, passwordHash) => {
+    const default_role = 'user';
+    const query = `
+        INSERT INTO users (name, email, password_hash, role_id) 
+        VALUES ($1, $2, $3, (SELECT role_id FROM roles WHERE role_name = $4)) 
+        RETURNING user_id
+    `;
+    const queryParams = [name, email, passwordHash, default_role];
+
+    const result = await db.query(query, queryParams);
+
+    if (result.rows.length === 0) {
+        throw new Error('Failed to create user');
+    }
+
+    if (process.env.ENABLE_SQL_LOGGING === 'true') {
+        console.log('Created new user with ID:', result.rows[0].user_id);
+    }
+
+    return result.rows[0].user_id;
+};
+```
+
+```javascript
+const processUserRegistrationForm = async (req, res) => {
+    const { name, email, password } = req.body;
+
+    try {
+        // Hash the password before storing it
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(password, salt);
+
+        // Create the user in the database
+        const userId = await createUser(name, email, passwordHash);
+
+        // Redirect to the home page after successful registration
+        req.flash('success', 'Registration successful! Please log in.');
+        res.redirect('/');
+    } catch (error) {
+        console.error('Error registering user:', error);
+        req.flash('error', 'An error occurred during registration. Please try again.');
+        res.redirect('/register');
+    }
+};
+```
+
+COACH: Perfect, thanks Marcos — this is a good, clean split between the DB layer (createUser) and the controller (processUserRegistrationForm).
+
+Let's start with the hashing itself. I see you're doing:
+const salt = await bcrypt.genSalt(10);
+const passwordHash = await bcrypt.hash(password, salt);
+
+Why did you choose to generate the salt separately with bcrypt.genSalt(10) instead of just calling bcrypt.hash(password, 10) directly (which generates the salt internally for you)?
+
+MARCOS: I don't know what the salt part does. I know that eventually what it's trying to do is take only a part of the password, to recognize when someone tries to enter the same password, all of this without storing the actual password for safety reasons.
+
+COACH: Totally fine to say "I don't know" — and honestly, your instinct about why we do this (never storing the actual password) is spot on. Let's clear up the salt part, since your mental model is close but mixed up with something else.
+
+Here's what's actually happening:
+- Hashing takes your full password and runs it through a one-way math function that produces a fixed-length string (the hash). It's not "taking only part of the password" — it uses the whole password, but the output is scrambled in a way that can't be reversed back into the original.
+- When someone logs in, you don't "un-hash" their input — you hash the password they typed again and compare the two hashes. If they match, the password was correct.
+- The salt is a random string added to the password before hashing. Its job is to make sure that even if two users pick the exact same password, they end up with completely different hashes stored in the database. Without a salt, an attacker could pre-compute hashes for common passwords (a "rainbow table") and instantly crack any match they find in a leaked database. The salt breaks that shortcut.
+
+So bcrypt.genSalt(10) generates that random salt, and the 10 is the "cost factor" — it controls how computationally expensive the hashing is (higher = slower to compute, which is intentional, to make brute-force attacks harder).
+
+Now, back to my original question: why did you choose to call bcrypt.genSalt(10) as a separate step, instead of just writing bcrypt.hash(password, 10) (which would generate a random salt internally for you in one line)?
+
+MARCOS: If I hadn't separated them, would it have been the same?
+
+COACH: Good question — yes, functionally the result would be the same. bcrypt.hash(password, 10) handles both salt generation and hashing internally in one call, and produces an equally secure result as doing genSalt then hash separately. The two-step version is really only useful if you need access to the salt value itself for some other purpose (which is rare in normal use), or it's just a pattern some tutorials teach. Neither is more secure than the other.
+
+So to be clear: your code isn't wrong, it's just slightly more verbose than it needs to be.
+
+Now, let's peek at the database side. Looking at your createUser function, the password_hash column stores the full bcrypt output (hash + salt combined, since bcrypt embeds the salt in its output string).
+
+Does your users table have a separate column for the salt, or does it only store the password_hash — and do you know why bcrypt's output can safely include the salt right inside that single string?
+
+MARCOS: No, the table only stores the hashed password. And no, I know nothing about the salt part, okay.
+
+COACH: No worries at all — that's a great thing to learn now.
+
+Here's the key idea: a bcrypt hash isn't just a random-looking string — it actually has a specific structure. It looks something like this:
+$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
+
+Breaking that down:
+- $2b$ — the algorithm version
+- 10$ — the cost factor (matches your genSalt(10))
+- The next 22 characters — the salt, embedded right in the string
+- Everything after that — the actual hash
+
+So bcrypt doesn't need a separate column, because it packs the salt into the same string it gives you. When you later call bcrypt.compare(enteredPassword, storedHash), bcrypt automatically extracts that embedded salt, re-hashes the entered password with it, and checks if the result matches. That's why your single password_hash column is all you need — nothing insecure about it.
+
+That wraps up the core idea of Topic 1 nicely. Before we move on — when you were writing this registration flow, did you have to think about what happens if someone tries to register with an email that's already taken, and if so, how did you handle that?
+
+MARCOS: The email, together with the id, is the only thing that can't be repeated, so no, there can't be two identical emails — that already can't exist. But if someone enters an email already registered in the database, it would throw an error saying that email is already being used, so that way someone can't create multiple accounts with a single email. The only way would be by completely deleting the user from the data.
+
+COACH: Understood, that makes sense — you let the UNIQUE constraint on the email column in the database do the heavy lifting, instead of manually checking before inserting.
+
+That leads me to a follow-up question: in your code, where and how do you catch that error the database throws when the email already exists, so you can show the user a message like "that email is already in use"? Do you handle it inside the catch of processUserRegistrationForm, or is there another part of the code that takes care of that?
+
+MARCOS: Hmm, I don't remember very well, but I think it marked flash cards in some function — but I'd have to check the functions.
+
+COACH: No problem at all, it's totally normal not to have every detail on the tip of your tongue — that's what we're reviewing the code for, not memorizing from memory.
+
+If you want, after the session you can review that part calmly. For now you don't need to look it up right now, it's not critical for what we're covering today.
+
+With this we've covered Topic 1 well (registration and password hashing). Let's move to Topic 2: Login and Session Management.
+
+Can you paste the code snippet that handles login — the part where you compare the entered password with the stored hash, and where the user's session is created?
+
+MARCOS: Here it is:
+
+```javascript
+const verifyPassword = async (password, passwordHash) => {
+    return bcrypt.compare(password, passwordHash);
+};
+
+const authenticateUser = async (email, password) => {
+    const user = await findUserByEmail(email);
+    if (!user) {
+        return null;
+    }
+
+    const user_password = await verifyPassword(password, user.password_hash);
+    if (!user_password) {
+        return null;
+    }
+    delete user.password_hash;
+
+    return user;
+}
+```
+
+COACH: Good approach — I like that you delete user.password_hash before returning the user object, so you avoid that sensitive data circulating any further than necessary through the rest of the app.
+
+Now, this snippet shows me how the password is verified and the user is authenticated, but I still don't see where the session is created once authenticateUser returns a valid user.
+
+Can you paste the code for the login route or controller, where you call authenticateUser and then store the user in req.session?
+
+MARCOS:
+```javascript
+const processLoginForm = async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+        const user = await authenticateUser(email, password);
+        if (user) {
+            // Store user info in session
+            req.session.user = user;
+            req.flash('success', 'Login successful!');
+
+            if (res.locals.NODE_ENV === 'development') {
+                console.log('User logged in:', user);
+            }
+
+            res.redirect('/dashboard');
+        } else {
+            req.flash('error', 'Invalid email or password.');
+            res.redirect('/login');
+        }
+    } catch (error) {
+        console.error('Error during login:', error);
+        req.flash('error', 'An error occurred during login. Please try again.');
+        res.redirect('/login');
+    }
+};
+```
+
+COACH: Thanks, this is clear. You store the full user object (already without the hash) directly in req.session.user, and from there you redirect to the dashboard depending on whether the login was successful or not.
+
+This leads me to a central question of this topic: do you know what's happening "behind the scenes" when you do req.session.user = user? That is, where is that session physically stored (on the server, in the browser, in a database), and what does the user's browser actually receive in order to "remember" that they're logged in on the next request?
+
+MARCOS: I didn't understand the question.
+
+COACH: No worries, let me rephrase it more simply.
+
+When the user logs in, their browser ends up with a cookie stored. That cookie doesn't contain the full user object (name, email, role, etc.) — it contains only a session ID, like a ticket number. The actual data (user.name, user.email, etc.) is stored on the server (in memory, or in a database/Redis, depending on how express-session is configured), and that ID from the cookie is the key used to look up that data on each request.
+
+So my question, more simply: in your project, do you know what you used to store sessions server-side — for example, memory (the default of express-session), a database, or something like connect-pg-simple / Redis?
+
+MARCOS: Sessions were stored in memory, there was no database to store the session information.
+
+COACH: Perfect, that makes sense — MemoryStore is the default value of express-session and is totally valid for development and for a learning project like this one.
+
+Worth knowing (for the future, not a mistake on your part) that MemoryStore has two important limitations in production: everything is lost if the server restarts (all users get logged out), and it doesn't work well if you have multiple instances of the server running at the same time, because each one would have its own separate memory. That's why in production something like connect-pg-simple or Redis is used. But for this project, memory is perfectly fine.
+
+With this we've covered Topic 2 well. Let's move to Topic 3: Route Protection Middleware.
+
+Can you paste the code for your requireLogin middleware (and/or requireRole, if you have them separately), where you check if the user is logged in before letting them access a route?
+
+MARCOS: I want to see more of Topic 2.
+
+COACH: Sure, no problem — let's stay a bit longer on Topic 2.
+
+An interesting part of your processLoginForm is this line:
+if (res.locals.NODE_ENV === 'development') {
+    console.log('User logged in:', user);
+}
+
+Why did you put that condition so that the console.log of the user only runs in development mode, and not in production?
+
+MARCOS: Sorry, let's go back to the previous question, I think it's stored on the local computer or something like that.
+
+COACH: Ah, I understand the confusion — it's worth clarifying this well because it's a key concept.
+
+There are two distinct places where information is stored, and it's important not to mix them up:
+
+1. In the browser (the user's computer): only the cookie is stored there, which contains just the session ID (a short text like s%3AhJ8x9k...). It's not "local storage" in the technical sense (that would be a different technology, like JavaScript's localStorage) — it's specifically an HTTP cookie.
+2. On the server (your backend, where Node/Express runs): the real content is stored there — the full user object. As you said, in your project this lives in the server's RAM (MemoryStore), not on the user's computer.
+
+So when the user logs in, two things happen: the server stores user in its own memory, and it sends the browser a cookie with the ID that points to that data.
+
+Just to check that this is clear: why do you think it's better to store the full user object on the server, instead of sending all that information directly to the browser inside the cookie?
+
+MARCOS: So as not to pass more information than necessary — if it works with what's passed, whenever the amount of information movement can be trimmed, it's worth doing.
+
+COACH: Good point, and that logic of "minimizing information movement" is valid and useful. But there's an even more important reason, tied to security:
+
+If you stored the full user object inside the cookie (instead of just the ID), the user would have that content on their own computer, where they could modify it. For example, if the object included something like role: 'user', someone could manually edit the cookie and change it to role: 'admin' before sending it back to the server. Since the server can't trust anything coming from the browser without verifying it, storing the real data server-side (where the user doesn't have direct access) prevents that kind of manipulation.
+
+So the cookie with the session ID works like a "key" that the server recognizes, but the content behind that key is protected because it lives only on the server.
+
+Does that part make sense, or do you want to keep digging into Topic 2, or shall we move on to Topic 3: route protection middleware?
+
+MARCOS: Ah, I understand, it's another security reason — it serves to protect the page's integrity. Let's move to the third part.
+
+COACH: Exactly, well summarized — it protects the integrity of the session data against manipulation from the client side.
+
+Let's move on then to Topic 3: Route Protection Middleware.
+
+Can you paste the code for your requireLogin middleware (and requireRole, if you have it), where you check whether the user is logged in and/or has the correct role before letting them access a route?
+
+MARCOS:
+```javascript
+const requireRole = (role) => {
+    return (req, res, next) => {
+        
+        if (!req.session || !req.session.user) {
+            req.flash('error', 'You must be logged in to access this page.');
+        }
+        if (req.session.user.role_name !== role) {
+            req.flash('error', 'You do not have permission to access this page.');
+            return res.redirect('/');
+        }
+        
+        // User has required role, continue
+        next();
+    };
+};
+```
+
+```javascript
+const requireLogin = (req, res, next) => {
+    if (!req.session || !req.session.user) {
+        req.flash('error', 'You must be logged in to access that page.');
+        return res.redirect('/login');
+    }
+    next();
+};
+```
+
+COACH: Good overall structure — you use a factory pattern with requireRole(role) that returns a middleware configured for that specific role, and that's fairly elegant.
+
+But I want you to look carefully at this block in requireRole:
+if (!req.session || !req.session.user) {
+    req.flash('error', 'You must be logged in to access this page.');
+}
+if (req.session.user.role_name !== role) {
+
+What do you think would happen if a user who is NOT logged in (without req.session.user) tries to access a route protected with this requireRole? Look closely at those two consecutive lines.
+
+MARCOS: It would flag an error in the flash cards and then they'd be redirected to the site's login.
+
+COACH: Let's trace through the code line by line, because I think something is slipping past us.
+
+if (!req.session || !req.session.user) {
+    req.flash('error', 'You must be logged in to access this page.');
+}
+// <-- there's no return or redirect here, the code keeps going
+if (req.session.user.role_name !== role) {
+
+When the user is NOT logged in, req.session.user is undefined. The first if is true and does req.flash(...) — but there's no return or res.redirect() inside that block. So execution continues to the next line.
+
+What do you think happens when the code tries to execute req.session.user.role_name if req.session.user is undefined?
+
+MARCOS: The code says it pretty clearly — if it's not the role defined when calling the function, it wouldn't pass the if. And undefined wouldn't be any role, so it wouldn't work.
+
+COACH: Almost, but there's an important technical detail we're missing here.
+
+The problem isn't that "undefined isn't any role" and therefore it doesn't match — the problem is earlier than that. req.session.user is undefined (the object doesn't exist). When you try to do req.session.user.role_name, JavaScript isn't comparing anything yet — first it has to access the role_name property of undefined, and that's impossible.
+
+It's like trying to ask "what color is the house?" when the house doesn't even exist. JavaScript doesn't say "it has no color" — it directly explodes with an error:
+TypeError: Cannot read properties of undefined (reading 'role_name')
+
+That means that instead of redirecting nicely to login, your server would crash with a 500 error for any non-logged-in user who tries to enter a route protected by requireRole.
+
+Knowing this, what change would you make to those first two lines of requireRole to fix it?
+
+MARCOS: I'd send a redirect so it doesn't continue to the next if, and so they have to be logged in before even checking if they have a role.
+
+COACH: Exactly — that's the correct solution. You need a return (or at least a return res.redirect(...)) inside that first if, so the code stops right there and never gets to try reading role_name from something that doesn't exist. Something like:
+
+if (!req.session || !req.session.user) {
+    req.flash('error', 'You must be logged in to access this page.');
+    return res.redirect('/login'); // this is what was missing
+}
+if (req.session.user.role_name !== role) {
+
+Good catch — this is exactly the kind of bug that can go unnoticed in quick tests (because you normally test while logged in) but breaks the app in a real-world case.
+
+One more question to close this topic: in your routes, do you use requireLogin and requireRole together on the same route (for example router.get('/admin', requireLogin, requireRole('admin'), ...)), or do you use only requireRole alone, trusting that it validates the login by itself too?
+
+MARCOS: In most routes it's only requireRole as the line of defense; only in a couple are both used.
+
+COACH: Understood — and that explains exactly why the bug we found is so important: if most of your routes depend only on requireRole as their sole line of defense, that bug from the missing return would affect most of your protected routes, not just a couple of isolated cases. Good catch then, worth fixing soon.
+
+With this we've covered Topic 3 well. Let's move to the last one: Topic 4 — Role-Based Navigation Links.
+
+Can you paste the snippet from your EJS file (probably the navbar or header) where you show or hide navigation links based on the logged-in user's role?
+
+MARCOS:
+```html
+<nav>
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/organizations">Organizations</a></li>
+            <li><a href="/projects">Projects</a></li>
+            <li><a href="/categories">Categories</a></li>
+            <% if (isLoggedIn) { %>
+                <li><a href="/logout">Logout</a></li>
+                <% } else { %>
+                    <li><a href="/register">Register</a></li>
+                    <li><a href="/login">Login</a></li>
+                    <% } %>
+
+        </ul>
+    </nav>
+```
+
+COACH: Thanks for sharing this. I see you have a condition based on isLoggedIn to show Login/Register vs Logout — that's fine for the logged-in/logged-out case.
+
+But Topic 4 specifically asks about role-based links (for example, a link to "Admin Panel" that only admins see, or something similar). In this snippet I don't see any condition checking role_name or anything similar — all the links that do appear (Organizations, Projects, Categories) are shown to anyone, logged in or not.
+
+Do you have, in some other EJS file in your project, any link that is shown or hidden specifically based on the user's role (for example, something only an admin sees and a regular user doesn't)?
+
+MARCOS:
+```html
+ <% if (user && user.role_name==='admin' ) { %>
+            <a href="/users-information">View Users Information</a>
+        <% } %>
+```
+
+COACH: There it is — perfect, this is indeed the example of role-based conditional rendering we were looking for.
+
+A couple of good things: you check user && before user.role_name, avoiding exactly the same kind of error we found earlier in the middleware (accessing a property of something that might not exist). Good defensive practice there.
+
+Now, let's connect this with Topic 3 that we already covered: this "View Users Information" link that's only shown to admins in the navbar — is the /users-information route it points to also protected on the backend with requireRole('admin') (or similar), or is it "protected" only because the link isn't shown in the navbar?
+
+MARCOS: No, no, it is protected by both requireLogin and requireRole, since it contains sensitive user information, and simply hiding the link would be a serious security flaw, since someone could search the URL and enter without any trouble.
+
+COACH: Excellent — that's exactly the key idea I wanted you to put into words, and you explained it perfectly: hiding a link in the UI is never real security, it's only a matter of user experience (avoiding showing options they can't use). The real protection has to be on the server side, in the middleware, because anyone can type the URL directly into the browser without ever going through the navbar.
+
+With this we've covered all four topics:
+1. Registration and password hashing (bcrypt, salt, unique password_hash column)
+2. Login and sessions (hash comparison, req.session, cookie vs. server-side storage, MemoryStore)
+3. Route protection middleware (found and corrected a real bug: missing return in requireRole)
+4. Role-based navigation links (and the distinction between hiding in the UI vs. protecting on the backend)
+
+Very good session, Marcos — you found a real bug in your own code, which is probably today's most valuable outcome. Before we close, is there anything from these four topics you'd like to go deeper on, or should I prepare the transcript file for download?
+
+MARCOS: Nothing, just pass the transcript as always, translate it all to English.
+
+=============================================================
+END OF TRANSCRIPT
