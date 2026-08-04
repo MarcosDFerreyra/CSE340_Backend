@@ -14,6 +14,21 @@
             <a href="/users-information">View Users Information</a>
         <% } %>
 
+        <% if (userProjects.length === 0) { %>
+            <h2>You haven't volunteered for any Projects</h2>
+        <% } else { %>
+            <h2>Projects you have Volunteered for</h2>
+            <% userProjects.forEach(project => { %>
+                <div class="dashboard_projects">
+                    <p><%= project.title %></p> 
+                    <form action="/project/<%= project.project_id %>/leave" method="POST">
+                        <button class="volunteer_leave" type="submit">Leave Project</button>
+                    </form>
+                </div>
+            <% }) %>
+        <% } %>
+
+
     </main>
 
     <%- include('partials/footer') %>

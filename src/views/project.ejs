@@ -36,12 +36,12 @@
                 <% if(checkVolunteerProject) {%>
                 <h2>You are volunteering for this project</h2>
                 <form action="/project/<%= project_details.project_id %>/leave" method="POST">
-                <button type="submit">abandon project</button>
+                <button class="volunteer_leave" type="submit">Leave project</button>
                 </form>
                 <% } else { %>
                     <h2>Volunteer for the Project</h2>
                     <form action="/project/<%= project_details.project_id %>/volunteer" method="POST">
-                        <button type="submit">Volunteer</button>
+                        <button class="volunteer_leave" type="submit">Volunteer</button>
                     </form>
                  <% } %>
             <% } %>

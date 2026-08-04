@@ -28,7 +28,17 @@ const checkVolunteer = async (user_id, project_id) => {
     return true
 }
 
-const getProjectsByVolunteerId = async () => {
-    };
+const getProjectsByVolunteerId = async (user_id) => {
+    const query = `
+    select p.title, p.project_id
+    from projects p
+    join volunteers v
+    on p.project_id = v.project_id
+    where v.user_id = $1`
+    
+    const result = await db.query(query, [user_id])
+
+    return result.rows
+};
 
 export { checkVolunteer, joinProject, leaveProject, getProjectsByVolunteerId }

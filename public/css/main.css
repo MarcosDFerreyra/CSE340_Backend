@@ -405,6 +405,27 @@ footer p {
   border-color: #bee5eb;
 }
 
+.dashboard_projects{
+  display: flex;
+  gap: var(--space-sm);
+}
+.volunteer_leave{
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 600;
+  padding: 0.5rem 1.1rem;
+  border-radius: 999px;
+  /* fully rounded = pill shape */
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.volunteer_leave:hover,
+.volunteer_leave:focus-visible {
+  background-color: var(--color-primary);
+  color: #ffffff;
+}
 
 /* ------------------------------------------------------
    8. RESPONSIVE ADJUSTMENTS

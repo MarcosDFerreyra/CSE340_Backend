@@ -2,7 +2,7 @@
 import { getAllProjects, getUpcomingProjects, getProjectDetails, createProject, updateProject } from '../models/projects.js';
 import { getCategoriesByProjectId } from '../models/categories.js';
 import { getAllOrganizations } from '../models/organizations.js';
-import { joinProject, leaveProject, getProjectsByVolunteerId, checkVolunteer } from "../models/volunteers.js";
+import { joinProject, leaveProject, checkVolunteer } from "../models/volunteers.js";
 import { body, param, validationResult } from 'express-validator';
 
 
