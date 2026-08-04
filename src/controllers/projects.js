@@ -2,7 +2,9 @@
 import { getAllProjects, getUpcomingProjects, getProjectDetails, createProject, updateProject } from '../models/projects.js';
 import { getCategoriesByProjectId } from '../models/categories.js';
 import { getAllOrganizations } from '../models/organizations.js';
+import { joinProject, leaveProject, getProjectsByVolunteerId, checkVolunteer } from "../models/volunteers.js";
 import { body, param, validationResult } from 'express-validator';
+
 
 const projectValidation = [
     body('title')
@@ -39,9 +41,22 @@ const showProjectsPage = async (req, res) => {
 const showProjectsDetailPage = async (req, res) => {
     const id = req.params.id;
     const project_details = await getProjectDetails(id);
-    const categories = await getCategoriesByProjectId(id)
-    res.render('project', {title: "Service Projects Details", categories, project_details });
-}
+    const categories = await getCategoriesByProjectId(id);
+
+    let checkVolunteerProject = false;
+
+    if (req.session.user) {
+        const user_id = req.session.user.user_id;
+        checkVolunteerProject = await checkVolunteer(user_id, id);
+    }
+
+    res.render('project', {
+        title: "Service Projects Details",
+        categories,
+        project_details,
+        checkVolunteerProject
+    });
+};
 
 const showNewProjectForm = async (req, res) => {
     const organizations = await getAllOrganizations();
@@ -115,8 +130,34 @@ const processEditProjectForm = async (req, res) => {
     res.redirect(`/project/${projectId}`);
 };
 
+const processJoinProject = async (req, res) => {
+    const project_id = req.params.id;
+    const user_id = req.session.user.user_id;
+    const joinprocess = await joinProject(user_id, project_id)
+    req.flash('success', 'You are volunteering for this project');
+    res.redirect(`/project/${project_id}`);
+}
+
+const processLeaveProject = async (req, res) => {
+    const project_id = req.params.id;
+    const user_id = req.session.user.user_id;
+    const leaveprocess = await leaveProject(user_id, project_id)
+    
+    req.flash('success', 'You are no longer volunteering for this project');
+    
+    res.redirect(`/project/${project_id}`);
+}
+
+const processCheckVolunteer = async (req, res) => {
+    const project_id = req.params.id;
+    const user_id = req.session.user.user_id;
+    const checkVolunteerProject = await checkVolunteer(user_id, project_id);
+    if (checkVolunteerProject) {
+        req.flash('success', 'You are already volunteering for this project');
+    }
+    req.flash('success', '');
+
+} 
 
 // Export any controller functions
-export {showEditProjectForm, processEditProjectForm, projectValidation, showProjectsPage, showProjectsDetailPage, showNewProjectForm, processNewProjectForm };
-
-
+export { processLeaveProject, processJoinProject, showEditProjectForm, processEditProjectForm, projectValidation, showProjectsPage, showProjectsDetailPage, showNewProjectForm, processNewProjectForm };

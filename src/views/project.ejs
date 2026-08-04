@@ -29,5 +29,22 @@
         <% if (user && user.role_name==='admin' ) { %>
             <a href="/edit-project/<%= project_details.project_id %>">Edit Project</a>
             <% } %>
+
+            
+            <% if (user) { %>
+               
+                <% if(checkVolunteerProject) {%>
+                <h2>You are volunteering for this project</h2>
+                <form action="/project/<%= project_details.project_id %>/leave" method="POST">
+                <button type="submit">abandon project</button>
+                </form>
+                <% } else { %>
+                    <h2>Volunteer for the Project</h2>
+                    <form action="/project/<%= project_details.project_id %>/volunteer" method="POST">
+                        <button type="submit">Volunteer</button>
+                    </form>
+                 <% } %>
+            <% } %>
+
     </main>
     <%- include('partials/footer') %>

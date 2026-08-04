@@ -9,7 +9,7 @@ import {
     showNewOrganizationForm,
     processNewOrganizationForm,
     organizationValidation} from './controllers/organizations.js';
-import { showProjectsPage, showProjectsDetailPage, showNewProjectForm, processNewProjectForm, projectValidation, processEditProjectForm, showEditProjectForm } from './controllers/projects.js';
+import { showProjectsPage, showProjectsDetailPage, showNewProjectForm, processNewProjectForm, projectValidation, processEditProjectForm, showEditProjectForm, processJoinProject, processLeaveProject } from './controllers/projects.js';
 import { showCategoriesPage, showCategoryDetails, showAssignCategoriesForm, processAssignCategoriesForm, showNewCategoryForm, processNewCategoryForm, showEditCategoryForm, processEditCategoryForm, categoryValidation } from './controllers/categories.js';
 import { testErrorPage } from './controllers/errors.js';
 import { showUserRegistrationForm, processUserRegistrationForm, showLoginForm, processLoginForm, processLogout, showDashboard, requireLogin, requireRole, showAllUsers } from './controllers/users.js';
@@ -54,6 +54,10 @@ router.get('/logout', processLogout);
 router.get('/dashboard', requireLogin, showDashboard);
 // route to users information
 router.get('/users-information', requireLogin, requireRole('admin'), showAllUsers )
+// route to join volunteers
+router.post('/project/:id/volunteer', requireLogin, processJoinProject)
+// route to leave volunteers
+router.post('/project/:id/leave', requireLogin, processLeaveProject)
 
 // error-handling routes
 router.get('/test-error', testErrorPage);

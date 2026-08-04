@@ -121,3 +121,10 @@ select * from roles
 
 UPDATE users 
 SET role_id = (SELECT role_id FROM roles WHERE role_name = 'admin') WHERE email = 'admin@example.com';
+
+
+create table volunteers(
+	user_id int not null references users (user_id),
+	project_id int not null references projects (project_id),
+	primary key (project_id, user_id)
+	);
